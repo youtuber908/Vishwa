@@ -1,0 +1,21 @@
+# Environment files - NEVER commit these
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Markdown files (remove this line if you want to keep documentation)
+*.md
+
+# Sensitive configuration and credential files
+*.pem
+*.key
+credentials.json
+service-account.json
+*.p12
+
+# OS and Editor specific files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo   

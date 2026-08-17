@@ -1,0 +1,38 @@
+Read `Instructions.txt` first and follow its instructions.
+Then read `AI_MEMORY.md`.
+Then read the relevant project context and documentation, including:
+- `PROJECT_CONTEXT.md`
+- `PROJECT_CONTEXT PART 2.md`
+- `ARCHITECTURE.md`
+- `API_REFERENCE.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+You do not necessarily need to read every large document in full if it is not relevant to the current task, but you MUST inspect the relevant documentation before working.
+
+Then inspect the current Git state:
+git status
+git branch --show-current
+git log -10 --oneline
+
+This is a Windows PowerShell environment. Never chain commands with && or || — use ; or run commands separately.
+
+Do not assume you remember anything from previous conversations.
+
+Compare the saved documentation/memory with the actual code and Git state. If they conflict, the actual code and Git state are the source of truth — not the docs.
+
+If TODO.md, CHANGELOG.md, or any other file claims a task is "complete" or "done," treat that as an unverified claim, not a fact, until you've checked it against real code and real command output.
+
+Never report a command as succeeded unless you show its real, complete output in this response. Never mark a task complete based on assumption, memory, or a prior session's claim. If you cannot verify something (e.g. you cannot take a screenshot), say so explicitly — do not proceed as if it were confirmed.
+
+After loading the project context, give me a short startup report showing:
+- Git branch
+- Git status
+- Current objective
+- What the previous session completed (and whether you were able to verify it, or it's still an unverified claim)
+- What is currently in progress
+- Known problems
+- Any discrepancies found between saved documentation and actual code/Git state
+- Next recommended step
+
+Then wait for my task.

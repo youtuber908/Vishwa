@@ -1,0 +1,139 @@
+import fs from 'fs';
+import { geoPath, geoEquirectangular } from 'd3-geo';
+
+const geojson = JSON.parse(fs.readFileSync('./src/datasets/india/india_state.geojson', 'utf8'));
+
+console.log(`Loaded ${geojson.features.length} features`);
+
+// Determine which property holds the state/UT name
+const nameProp = 'NAME_1';
+
+// Determine bounding box of all coordinates
+let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+function examineCoordinates(coords) {
+  // coords can be: Polygon: [[[lon,lat],...]] or MultiPolygon: [[[ [lon,lat],... ]], ...]
+  if (Array.isArray(coords[0]) && Array.isArray(coords[0][0]) && typeof coords[0][0][0] === 'number') {
+    // This is a Polygon (array of LinearRings)
+    for (const ring of coords) {
+      for (const point of ring) {
+        const [x, y] = point;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  } else {
+    // Assume it's MultiPolygon (array of Polygons)
+    for (const polygon of coords) {
+      examineCoordinates(polygon); // recursive call for each polygon
+    }
+  }
+}
+
+geojson.features.forEach(f => {
+  const coords = f.geometry.coordinates;
+  examineCoordinates(coords);
+});
+
+console.log(`Bounds: lon [${minX}, ${maxX}], lat [${minY}, ${maxY}]`);
+
+// If bounds are invalid, something went wrong
+if (minX === Infinity || maxX === -Infinity) {
+  console.error('Invalid bounds, check geometry');
+  process.exit(1);
+}
+
+// Width and height of the viewBox we want to fit into (from the existing code)
+const width = 332;
+const height = 328;
+const padding = 20; // leaving some margin inside viewBox
+
+// Compute scale to fit bounds into (width - 2*padding) x (height - 2*padding)
+const lonRange = maxX - minX;
+const latRange = maxY - minY;
+const scale = Math.min((width - 2*padding) / lonRange, (height - 2*padding) / latRange);
+
+// Create path generator using equirectangular projection
+const projection = geoEquirectangular()
+  .scale(scale)
+  .translate([
+    padding - minX * scale,
+    height - padding + maxY * scale // Note: y increases downwards in SVG
+  ]);
+
+const pathGenerator = geoPath().projection(projection);
+
+const results = {};
+
+geojson.features.forEach(f => {
+  const props = f.properties;
+  // Get name from NAME_1
+  let name = props[nameProp];
+  if (!name) {
+    console.warn('Feature missing name:', props);
+    return;
+  }
+  // Normalize name to match our region ids: lower case, replace spaces and special chars with hyphens
+  const id = name
+    .toLowerCase()
+    .replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/--+/g, '-');
+
+  // Generate path data
+  try {
+    const pathData = pathGenerator({type: 'Feature', geometry: f.geometry, properties: {}});
+    results[id] = { id, name, d: pathData };
+  } catch (e) {
+    console.error(`Failed to generate path for ${name}:`, e.message);
+  }
+});
+
+console.log(`Generated ${Object.keys(results).length} paths`);
+
+// Let's also check which IDs we have and compare with expected list from INDIA_REGIONS
+const expectedIds = [
+  'andhra-pradesh', 'arunachal-pradesh', 'assam', 'bihar', 'chhattisgarh', 'goa', 'gujarat', 'haryana',
+  'himachal-pradesh', 'jharkhand', 'karnataka', 'kerala', 'madhya-pradesh', 'maharashtra', 'manipur',
+  'meghalaya', 'mizoram', 'nagaland', 'odisha', 'punjab', 'rajasthan', 'sikkim', 'tamil-nadu', 'telangana',
+  'tripura', 'uttarakhand', 'uttar-pradesh', 'west-bengal',
+  'andaman-nicobar', 'chandigarh', 'dadra-nagar-haveli-and-daman-and-diu', 'delhi', 'jammu-kashmir', 'ladakh',
+  'lakshadweep', 'puducherry'
+];
+const missing = expectedIds.filter(id => !(id in results));
+const extra = Object.keys(results).filter(id => !expectedIds.includes(id));
+if (missing.length > 0) {
+  console.warn('Missing expected IDs:', missing);
+}
+if (extra.length > 0) {
+  console.warn('Unexpected IDs:', extra);
+}
+
+// Write to a TypeScript file
+let output = '// Auto-generated from official India state GeoJSON (Survey of India standard via natural earth data)\n';
+// We'll keep same viewBox comment as before
+output += '// Projection: equirectangular (simple), viewBox: 341 335 332 328\n\n';
+output += 'export interface IndiaRealPathEntry {\n';
+output += '  id: string\n';
+output += '  name: string\n';
+output += '  iso: string | null\n';
+output += '  d: string\n';
+output += '}\n\n';
+output += 'export const INDIA_REAL_PATHS: Record<string, IndiaRealPathEntry> = {\n';
+const entries = Object.values(results).sort((a, b) => a.id.localeCompare(b.id));
+entries.forEach(entry => {
+  // Escape quotes and newlines in d if needed
+  const d = entry.d.replace(/"/g, '\\"');
+  output += `  "${entry.id}": {\n`;
+  output += `    id: "${entry.id}",\n`;
+  output += `    name: "${entry.name.replace(/"/g, '\\"')}",\n`;
+  output += `    iso: null,\n`;
+  output += `    d: "${d}"\n`;
+  output += `  },\n`;
+});
+output += '};\n';
+
+fs.writeFileSync('./src/features/india/IndiaMap/indiaRealPaths.ts', output);
+console.log('Written to src/features/india/IndiaMap/indiaRealPaths.ts');
