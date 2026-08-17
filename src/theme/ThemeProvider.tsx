@@ -37,7 +37,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const apply = () => {
       const saved = window.localStorage.getItem(STORAGE_KEY)
-      let next
+      let next: 'light' | 'dark'
       if (!saved) {
         // No saved value, force dark on first load
         next = 'dark'
