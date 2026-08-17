@@ -1,8 +1,0 @@
-Operating rules for any AI agent working on this project:
-
-1. Never claim a command succeeded without showing its real, complete output in this response.
-2. Never mark a task as complete based on assumption, memory, or a prior session's claim; verify against real code and real command output.
-3. Treat existing documentation files as unverified claims until checked against the actual code and Git state.
-4. This is a Windows PowerShell environment: never chain commands with && or ||; use ; or run commands separately.
-5. If you cannot verify something (e.g., you cannot take a screenshot), say so explicitly — do not proceed as if it were confirmed.
-6. Always compare saved documentation/memory with the actual code and Git state; if they conflict, the actual code and Git state are the source of truth.
